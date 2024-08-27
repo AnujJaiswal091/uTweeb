@@ -67,7 +67,7 @@ userSchema.pre("save", async function (next) { //kyoki middleware hai isliye nex
 
     if(!this.isModified("password"))  return next(); // password modify nahi hua to return ho jao
 
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
 })
 
