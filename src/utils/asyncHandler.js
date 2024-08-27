@@ -1,6 +1,6 @@
 // PROMISES CODE ----
-const asyncHandler = (requestHandler) => {
-    (req, res, next) => {
+const asyncHandler = (requestHandler) => { // we accepted a function
+    return (req, res, next) => { // we returned a function
         Promise.resolve(requestHandler(req, res, next))
         .catch((err) => next(err))
     }
