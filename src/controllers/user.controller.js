@@ -1,5 +1,5 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {ApiError} from "../utils"
+import {ApiError} from "../utils/ApiError.js"
 import {User}  from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -16,26 +16,26 @@ const registerUser = asyncHandler( async(req, res) => {
    //9  return res
 
     //1
-    const{username, fullname, email, password} = req.body // taking details from json or form
-    console.log("email: ", email);
+    const{username, fullName, email, password} = req.body // taking details from json or form
+    // console.log("email: ", email);
 
 
     //2
     // checking one by one 
-    // if (fullname === ""){
+    // if (fullName === ""){
     //     throw new ApiError(400, "full name is required")
     // }
 
     // check all at same time
     if (
-        [username, fullname, email, password].some((feild) =>  // we didnt used curly braces so no need for return statement
+        [username, fullName, email, password].some((feild) =>  // we didnt used curly braces so no need for return statement
         feild.trim() === "")
     ) {
         throw new ApiError(400, "All feilds are required")
     }
 
     // 3
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or:[{ username }, { email }]
     })
 
@@ -47,8 +47,14 @@ const registerUser = asyncHandler( async(req, res) => {
     const avatarLocalPath = req.files?.avatar[0]?.path  // from multer
     console.log(avatarLocalPath);
 
-    const coverImageLocalPath = req.files?.coverImage[0]?.path  // from multer
-    console.log(coverImageLocalPath);
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;  // from multer
+    // console.log(coverImageLocalPath);
+
+    let coverImageLocalPath
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0)
+    {
+        coverImageLocalPath = req.files.coverImage[0].path
+    }
 
     if (!avatarLocalPath)
     {
@@ -67,7 +73,7 @@ const registerUser = asyncHandler( async(req, res) => {
 
     //6
     const user = await User.create({
-        fullname,
+        fullName,
         avatar: avatar.url,
         coverImage: coverImage?.url || "", // as we are not explicitly checking for coverImage unlike avatar hence we have to take care of it
         email,
@@ -78,7 +84,8 @@ const registerUser = asyncHandler( async(req, res) => {
 
     //7
     const createdUser = await User.findById(user._id)
-    .select( // excudind password and refresh token "-" sign in front of any feild will exclude it
+    .select( // excudind password and refresh token.
+            //  "-" sign in front of any feild will exclude it
         "-password -refreshToken"
     )
     //8 
@@ -94,4 +101,4 @@ const registerUser = asyncHandler( async(req, res) => {
 
 } )
 
-export {registerUser,}
+export {registerUser}

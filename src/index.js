@@ -4,7 +4,7 @@ import connectDb from "./db/index.js";
 import { app } from "./app.js";
 
 dotenv.config({
-    path: './env'
+    path: './.env'
 })
 
 connectDb() //async function always returns a prommise hence we can use .then and .catch promise chaining with this
