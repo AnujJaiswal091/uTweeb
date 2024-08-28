@@ -78,7 +78,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 }
 
 // BOTH ARE JWT TOKENS
-userSchema.methods.generateAccessToken = async function(){
+userSchema.methods.generateAccessToken = async function(){ // SHORT LIVED, necessary for validation and authentication
     return jwt.sign(
         {
             _id: this._id, // from mongodb
@@ -95,7 +95,7 @@ userSchema.methods.generateAccessToken = async function(){
 }
 
 
-userSchema.methods.generateRefreshToken = async function(){
+userSchema.methods.generateRefreshToken = async function(){ // LONG LIVED , necessary to generate access token without reentering password
     return jwt.sign(
         {
             _id: this._id, // from mongodb

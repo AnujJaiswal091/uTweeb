@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser } from "../controllers/user.controller.js";
 import {upload} from "../middlewares/multer.middleware.js"
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router()
 
@@ -15,8 +16,13 @@ router.route("/register").post(
             maxCount: 1
         }
     ]),
-    registerUser)
+    registerUser
+    )
 // the url will be like -> http://localhost:8000/api/v1/users/register
 
+router.route("/login").post(loginUser)
+
+//secured routes
+router.route("/logout").post(verifyJWT, logoutUser) //here verifyJWT is a middleware that will run before logoutUser
 
 export default router
