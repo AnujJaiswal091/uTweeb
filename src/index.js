@@ -3,6 +3,8 @@ import dotenv from "dotenv"
 import connectDb from "./db/index.js";
 import { app } from "./app.js";
 
+//ALWAYS USE THE FULL filename.js EXTENTION. THAT LAST .js IS IMPORTANT
+
 dotenv.config({
     path: './.env'
 })

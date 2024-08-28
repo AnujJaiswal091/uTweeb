@@ -1,14 +1,15 @@
 // PROMISES CODE ----
-const asyncHandler = (requestHandler) => { // we accepted a function
-    return (req, res, next) => { // we returned a function
-        Promise.resolve(requestHandler(req, res, next))
-        .catch((err) => next(err))
-    }
-}
+const asyncHandler = (requestHandler) => {
+  // we accepted a function
+  return (req, res, next) => {
+    // we returned a function
+    Promise
+        .resolve(requestHandler(req, res, next))
+        .catch((err) => next(err));
+  };
+};
 
-
-
-export {asyncHandler}
+export { asyncHandler };
 
 // ASYNC AWAIT CODE ----
 

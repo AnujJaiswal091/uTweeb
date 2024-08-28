@@ -54,7 +54,7 @@ const userSchema = new Schema(
             required: [true, 'Password is required'],
         },
 
-        refreshToken:{
+        refreshToken:{ // we will keep refresh token in the db to authenticate user without password
             type: String,
         }
     },
