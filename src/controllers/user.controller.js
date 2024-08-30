@@ -7,6 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
   // we will not use asyncHandler here as we are not mmaking any web request just a internal method
@@ -488,10 +489,77 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "channel does not exists");
   }
 
+  console.log(channel);
+
   return res
     .status(200)
     .json(
       new ApiResponse(200, channel[0], "user channel fetched successfully")
+    );
+});
+
+// -----IMP------
+// req.user._id does not returns mongodb id
+// it returns a string but because we are using mongoose it automatically converts it to the mongodb id
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id), // here we cant directly use req.user._id as here mongoose does not works directly, so we have to create a mongoose objectId
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        // here we have to use anested pipeline because even though we fetch the vidoes document it contains owner feild which points again to the user
+        // and without the nested pipeline it will return a incomplete data
+        pipeline: [
+          {
+            // now as we are inside the lookup pipeline so we have to lookup inside the User
+            $lookup: {
+              from: "users",
+              localField: "owner", // as we are inside videos
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  // this pipeline is to remove unnecessary things from owner feild
+                  $project: {
+                    fullName: 1,
+                    userName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          // as now owner is a array with the useful data at its first index
+          // this pipeline is only for the ease of frontend dev
+          {
+            $addFields: {
+              owner: {
+                // will overwrite the owner feild and only give it useful data that is in the first index of the owner feild array
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "watched histoy fetched successfully"
+      )
     );
 });
 
@@ -506,4 +574,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory,
 };
