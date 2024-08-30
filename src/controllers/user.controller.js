@@ -405,6 +405,96 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "coverImage updated successfully"));
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError(400, "username is missing");
+  }
+
+  // AGGREGATION PIPELINES ========================================================
+  // every output of a stage of aggregation pipelines can be used as a input for the next stage
+  // every aggregation pipelines creates a document of the query as a result
+
+  // supoose the user is looking at the page of tedx so here username = tedx and user = user
+
+  // the results of aggregation is a array
+  const channel = await User.aggregate([
+    //PIPELINES :
+    // finding tedx
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+
+    // FINDING SUBSCRIBERS OF A tedx
+    {
+      $lookup: {
+        from: "subscriptions", // this is "Subscription" but as document is stored as a lowerCase and in plural form
+        localField: "_id",
+        foreignField: "channel", // counting every document with channel: same as the tedx will give us subscribers of the tedx
+        as: "subscribers",
+      },
+    },
+
+    // finding the no. of channels to which the tedx have subscribedTo
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber", // counting every document with subscriber: same as tedx will give us channels to which the tedx has subscribedTo
+        as: "subscribedTo",
+      },
+    },
+
+    // adding these feilds to tedx's userModel schema
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        channelsSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+
+        // checking if the current user has subscribed to the tedx
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] }, // this means inside doucument "subscribers" -> where "channel" name was tedx is there a "subscriber" whose name is same as user
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+
+    // this will be used to give only selected things not everything
+    {
+      $project: {
+        fullName: 1,
+        usernmae: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+      },
+    },
+  ]);
+
+  if (!channel?.length) {
+    throw new ApiError(404, "channel does not exists");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, channel[0], "user channel fetched successfully")
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -415,4 +505,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
 };
