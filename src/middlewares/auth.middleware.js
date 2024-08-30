@@ -30,6 +30,8 @@ export const verifyJWT = asyncHandler(async(req, _, next) => { // because we dnt
         }
     
         req.user = user //added new object to the request
+        // console.log("user => ", req.user);
+        
     
         next() //indicates that its work is done here now run the next thing
     } catch (error) {

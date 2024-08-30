@@ -30,6 +30,6 @@ router.route("/login").post(loginUser);
 
 //secured routes
 router.route("/logout").post(verifyJWT, logoutUser); //here verifyJWT is a middleware that will run before logoutUser
-router.route("/refresh-token").post(refreshAccessToken);
+router.route("/refresh-token").post(refreshAccessToken); // will come under secured routes as user is already logged in
 
 export default router;
