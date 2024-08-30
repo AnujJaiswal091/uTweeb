@@ -67,6 +67,7 @@ web_modules/
 *.tgz
 
 out.txt
+out.logs
 
 # Yarn Integrity file
 .yarn-integrity

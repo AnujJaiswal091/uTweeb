@@ -1,7 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteCloudinaryImage,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -166,7 +169,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     user._id
   );
-  console.log("accessToken:", accessToken);
+  // console.log("accessToken:", accessToken);
   // console.log("refreshToken:", refreshToken);
 
   const loggedInUser = await User.findById(user._id) // here we have access to the user before the creation of our token so we again have to make a database query after generating them
@@ -221,6 +224,10 @@ const logoutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
 
+// THIS WILL BE used by frontEnd dev when the request hits 401 unauthorized access
+// instead of promptiong again for login he can
+// hit refreshAccessToken api endPoint to refresh both the access and refresh token
+// if the user have a valid refreshToken
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
@@ -270,6 +277,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
+// REMEMBER TO USE VerifyJWT middleware when using all the functions that take req.user because its checking wether the user is authenticated or not
+// and also thats where this user opbject is injected into the request
+
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
@@ -292,9 +302,11 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  console.log("user: ", req.user);
+
   return res
     .status(200)
-    .json(200, req.user, "current user fetched successfully"); // we injected user on the req using middleware
+    .json(new ApiResponse(200, req.user, "current user fetched successfully")); // we injected user on the req using middleware
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -304,7 +316,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All feilds are required");
   }
 
-  const user = User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
@@ -328,11 +340,14 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar file is missing");
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  const avatar = await uploadOnCloudinary(avatarLocalPath); // new avatar object from cloudiniary after uploading
 
-  if (avatar.url) {
+  if (!avatar.url) {
     throw new ApiError(400, "Error while uploading on cloudinary");
   }
+
+  // fetching the previously used cloudinary avatar public id
+  const previousAvatarPublicId = req.user.avatar;
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -343,6 +358,11 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
+
+  // deleting previousAvatarPublicId from cloudinary
+  if (previousAvatarPublicId) {
+    await deleteCloudinaryImage(previousAvatarPublicId);
+  }
 
   return res
     .status(200)
@@ -358,9 +378,12 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-  if (coverImage.url) {
+  if (!coverImage.url) {
     throw new ApiError(400, "Error while uploading on cloudinary");
   }
+
+  // fetching the previously used cloudinary coverImage public id
+  const previousCoverImagePublicId = req.user.coverImage;
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -371,6 +394,11 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
+
+  // deleting previousCoverImagePublicId from cloudinary
+  if (previousCoverImagePublicId) {
+    await deleteCloudinaryImage(previousCoverImagePublicId);
+  }
 
   return res
     .status(200)
