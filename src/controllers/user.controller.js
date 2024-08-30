@@ -203,9 +203,14 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        // this mongodb operator can update the value of a particular feild
-        refreshToken: undefined,
+      // $set: {
+      //   // this mongodb operator can update the value of a particular feild
+      //   refreshToken: null,
+      // },
+
+      // we can also use
+      $unset: {
+        refreshToken: 1, // this removes the feild from document
       },
     },
     {
@@ -243,7 +248,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
 
-    const user = User.findById(decodedToken?._id);
+    const user = await User.findById(decodedToken?._id);
 
     if (!user) {
       throw new ApiError(401, "Invalid refresh token");
@@ -259,22 +264,25 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       secure: true,
     };
 
-    const { accessToken, newRefreshToken } =
-      await generateAccessAndRefreshToken(user._id);
-
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user._id
+    );
+    
+    // Send the new tokens in the response
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken: newRefreshToken },
-          "accessToken refreshed"
+          { accessToken, refreshToken },
+          "Access token refreshed"
         )
       );
   } catch (error) {
-    throw new ApiError(401, error?.message || "INvalid refresh token");
+    console.error("Error during token refresh: ", error);
+    throw new ApiError(401, error.message || "Invalid refresh token");
   }
 });
 
