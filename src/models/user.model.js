@@ -45,7 +45,7 @@ const userSchema = new Schema(
         watchHistory:[ // watch history is a array that contains the id of every video that a user watched
             {
                 type: Schema.Types.ObjectId,
-                ref: "V ideo"
+                ref: "Video"
             }
         ],
 

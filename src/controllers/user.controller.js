@@ -304,6 +304,8 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
   user.password = newPassword;
   await user.save({ validateBeforeSave: false }); //we only want to validate password
+  // This validation includes schema validations such as required fields, data types, custom validators, etc.
+
 
   return res
     .status(200)
@@ -537,7 +539,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(404, "channel does not exists");
   }
 
-  console.log(channel);
+  // console.log(channel);
 
   return res
     .status(200)
@@ -547,7 +549,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 // -----IMP------
-// req.user._id does not returns mongodb id
+// req.user._id does NOT returns mongodb ObjectId
 // it returns a string but because we are using mongoose it automatically converts it to the mongodb id
 
 const getWatchHistory = asyncHandler(async (req, res) => {
