@@ -146,7 +146,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
 
   if (!isValidObjectId(channelID)) {
-    throw new Apierror(400, "channel not found");
+    throw new ApiError(400, "channel not found");
   }
 
   // 2. find videos where Owner is channelID and isPublished is true
@@ -201,7 +201,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
   const videos = await Video.aggregatePaginate(pipeline, options);
 
   if (videos?.total_videos === 0) {
-    throw new Apierror(400, "Videos Not Found");
+    throw new ApiError(400, "Videos Not Found");
   }
 
   return res.status(200).json(new ApiResponse(200, { videos }, "Videos Found"));

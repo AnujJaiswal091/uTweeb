@@ -99,7 +99,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
   const findPlaylist = await Playlist.findById(playlistId);
 
   if (!findPlaylist) {
-    throw new Apierror(400, "Playlist not found!");
+    throw new ApiError(400, "Playlist not found!");
   }
 
   // 3. check if the playlist owner is the same as the logged-in user
@@ -183,7 +183,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   // 1. get playlistId from params URL
   const { playlistId } = req.params;
   if (!isValidObjectId(playlistId)) {
-    throw new Apierror(400, "Invalid playlistId");
+    throw new ApiError(400, "Invalid playlistId");
   }
 
   // 2. find the playlist by id
@@ -200,7 +200,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   // 4. delete the playlist
   const playlistDeleted = await Playlist.findByIdAndDelete(playlistId);
   if (!playlistDeleted) {
-    throw new Apierror(500, "playlist not delete. Please try again!");
+    throw new ApiError(500, "playlist not delete. Please try again!");
   }
 
   return res

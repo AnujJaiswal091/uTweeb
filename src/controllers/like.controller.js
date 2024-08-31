@@ -123,7 +123,7 @@ const getLikedVideos = asyncHandler(async (req, res) =>
     });
 
     if (!LikedVideos) {
-      throw new Apierror(404, "Liked Videos Not Found!");
+      throw new ApiError(404, "Liked Videos Not Found!");
     }
 
     // 2. return the list of liked videos
