@@ -17,64 +17,45 @@ cloudinary.config({
 });
 
 // STEP -> 2:
-const uploadOnCloudinary = async (localFilePath) => {
-  // localFilePath is local file path location on the server
+// Upload a file to cloudinary
+const uploadOnCloudinary = async(localFilePath, path) => {
   try {
-    if (!localFilePath) {
-      console.log("file does not exists");
+      //check whether the file exists
+      if (!localFilePath) return null
+          // Upload a file
+      const response = await cloudinary.uploader.upload(localFilePath, { asset_folder: path, resource_type: 'auto' })
+          // file uploaded successfully
+          // console.log("File uploaded successfully on cloudinary", response);
+      fs.unlinkSync(localFilePath) // remove the file from the local storage
+      return response // return the response which contian the url of the uploaded file
+  } catch (error) {
+      fs.unlinkSync(localFilePath) // remove the file from the local storage and it must be done before throwing the error
+      return null
+  }
+}
+
+
+// Delete from cloudnary
+const deleteFromCloudinary = async(cloudinaryFilePath, path) => {
+  // console.log(cloudinaryFilePath," ===================================");
+  
+  try {
+      if (!cloudinaryFilePath) return null
+
+      const avatarPublicId = cloudinaryFilePath.split("/").pop().split(".")[0];
+
+      const response = await cloudinary.uploader.destroy(`${avatarPublicId}`)
+
+      // console.log(avatarPublicId, "          ", response);
+      
+      return response
+
+  } catch (error) {
+      console.error("Error deleting file from Cloudinary:", error);
       return null;
-    }
 
-    // upload the files on cloudinary
-    const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto",
-    });
-
-    // file has been uploaded succesfully
-    // console.log("file is uploaded on cloudinary", response.url);
-    fs.unlinkSync(localFilePath); // if uploaded successfully then too unlink from server
-    console.log(response);
-
-    return response;
-  } catch (error) {
-    fs.unlinkSync(localFilePath); // remove the locally saved temporary file as the upload got failed
-    return null;
   }
-};
-
-// extracting publicId if.e. everything after the /upload/ in the public url without the extension
-const extractPublicId = (url) => {
-  let start = url.length;
-
-  // Loop backward to find the first slash
-  for (let i = url.length - 1; i >= 0; i--) {
-    if (url[i] === "/") {
-      start = i;
-      break;
-    }
-  }
-
-  // Remove extension part if exists
-  let end = start;
-  while (end < url.length && url[end - 1] !== ".") {
-    end++;
-  }
-
-  // Return the substring between the last slash and the extension
-  return url.substring(start, end - 1).split("/")[1];
-};
-
-// DELETE previous image FROM CLOUDINARY
-const deleteCloudinaryImage = async (url) => {
-  const publicId = await extractPublicId(url);
-  try {
-    await cloudinary.uploader.destroy(publicId);
-    console.log(`Image with public ID ${publicId} deleted successfully.`);
-  } catch (error) {
-    console.error(`Error deleting image: ${error.message}`);
-    throw new Error("Error deleting the previous image from Cloudinary.");
-  }
-};
+}
 
 // const uploadOrReplaceOnCloudinary = async (localFilePath, url) => {
 //   try {
@@ -101,4 +82,4 @@ const deleteCloudinaryImage = async (url) => {
 //   }
 // };
 
-export { uploadOnCloudinary, deleteCloudinaryImage };
+export { uploadOnCloudinary, deleteFromCloudinary };

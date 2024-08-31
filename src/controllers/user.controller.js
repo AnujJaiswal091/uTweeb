@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import {
   uploadOnCloudinary,
-  deleteCloudinaryImage,
+  deleteFromCloudinary,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
@@ -267,7 +267,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
       user._id
     );
-    
+
     // Send the new tokens in the response
     return res
       .status(200)
@@ -341,78 +341,118 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
+////////// UPADTE USER AVATARIMAGES //////////
+// 1. get the new avatar image from frontend
+// 2. upload the image on local storage
+// 3. upload the image on cloudinary
+// 3.3 delete the old avatar image from cloudinary
+// 4. update the user avatar in the database // req.user is added by verifyJWT middleware
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  const avatarLocalPath = req.file?.path; // from multer
-  // here we have used file not files because only one file is being needed
+  // 1. get the new avatar image from frontend
+  // 2. upload the image on local storage
+  const newAvatarLocalPath = req.file?.path;
 
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar file is missing");
+  if (!newAvatarLocalPath) {
+    throw new ApiError(400, "please upload avatar");
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath); // new avatar object from cloudiniary after uploading
+  // 3. upload the image on cloudinary
+  const newAvatarCloudnary = await uploadOnCloudinary(
+    newAvatarLocalPath,
+    "img"
+  );
 
-  if (!avatar.url) {
-    throw new ApiError(400, "Error while uploading on cloudinary");
+  if (!newAvatarCloudnary) {
+    throw new ApiError(400, "please upload avatar");
   }
 
-  // fetching the previously used cloudinary avatar public id
-  const previousAvatarPublicId = req.user.avatar;
+  // 3.3 delete the old avatar image from cloudinary
+  // // get the old avatar image from the database
+  const oldAvatarUrl = req.user?.avatar;
 
-  const user = await User.findByIdAndUpdate(
+  // // delete the old avatar image from cloudinary
+  const deleteOldAvatar = await deleteFromCloudinary(oldAvatarUrl, "img");
+
+  if (!deleteOldAvatar) {
+    throw new ApiError(400, "avatar not found");
+  }
+
+  // 4. update the user avatar in the database
+  const updateImage = await User.findByIdAndUpdate(
     req.user?._id,
-    {
-      $set: {
-        avatar: avatar.url,
-      },
-    },
+    { $set: { avatar: newAvatarCloudnary.url } },
     { new: true }
   ).select("-password");
 
-  // deleting previousAvatarPublicId from cloudinary
-  if (previousAvatarPublicId) {
-    await deleteCloudinaryImage(previousAvatarPublicId);
-  }
+  // 5. update the user avatar in the database
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user?._id,
+    { $set: { avatar: newAvatarCloudnary.url } },
+    { new: true }
+  ).select("-password");
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "avatar updated successfully"));
+    .json(new ApiResponse(200, updatedUser, "Avatar updated successfully"));
 });
+///////////////////////////////////////////////////////////////////
 
+////////// UPADTE USER COVERIMAGES //////////
+// 1. get the new avatar image from frontend
+// 2. upload the image on local storage
+// 3. upload the image on cloudinary
+// 4. update the user avatar in the database // req.user is added by verifyJWT middleware
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-  const coverImageLocalPath = req.file?.path; // from multer
+  try {
+    // 1. get the new cover image from frontend
+    // 2. upload the image on local storage
+    const newCoverImageLocalPath = req.file?.path;
 
-  if (!coverImageLocalPath) {
-    throw new ApiError(400, "coverImage file is missing");
+    if (!newCoverImageLocalPath) {
+      throw new ApiError(400, "please upload CoverImage");
+    }
+
+    // 3. upload the image on cloudinary
+    const newCoverImageCloudnary = await uploadOnCloudinary(
+      newCoverImageLocalPath,
+      "img"
+    );
+
+    if (!newCoverImageCloudnary) {
+      throw new ApiError(400, "Image not uploaded on cloudinary");
+    }
+
+    // 3.3 delete the old cover image from cloudinary
+    // // get the old cover image from the database
+    const oldCoverUrl = req.user?.avatar;
+
+    // // delete the old Cover image from cloudinary
+    const deleteOldCover = await deleteFromCloudinary(oldCoverUrl, "img");
+
+    if (!deleteOldCover) {
+      throw new ApiError(400, "coverimage not found");
+    }
+
+    // 4. update the user avatar in the database // req.user is added by verifyJWT middleware
+    const updateImage = await User.findByIdAndUpdate(
+      req.user?._id,
+      { $set: { avatar: newCoverImageCloudnary.url } },
+      { new: true }
+    ).select("-password");
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, updateImage, "CoverImage upadte successfully")
+      );
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new Apierror(500, {}, "error in updating cover image"));
   }
-
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-
-  if (!coverImage.url) {
-    throw new ApiError(400, "Error while uploading on cloudinary");
-  }
-
-  // fetching the previously used cloudinary coverImage public id
-  const previousCoverImagePublicId = req.user.coverImage;
-
-  const user = await User.findByIdAndUpdate(
-    req.user?._id,
-    {
-      $set: {
-        coverImage: coverImage.url,
-      },
-    },
-    { new: true }
-  ).select("-password");
-
-  // deleting previousCoverImagePublicId from cloudinary
-  if (previousCoverImagePublicId) {
-    await deleteCloudinaryImage(previousCoverImagePublicId);
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "coverImage updated successfully"));
 });
+
+///////////////////////////////////////////////////////////////////
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { username } = req.params; // here we are taking from params
